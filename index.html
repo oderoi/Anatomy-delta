@@ -1,0 +1,918 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Anatomy Atelier — Learn anatomy like an artist</title>
+<meta name="description" content="Explore medically detailed 3D organs through an elegant, interactive anatomy atelier.">
+<meta name="theme-color" content="#f7f0e7">
+
+<link rel="preconnect" href="https://esm.sh">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&display=swap" rel="stylesheet">
+
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E🫀%3C/text%3E%3C/svg%3E">
+
+<style>
+:root {
+  --ink: #2f2a27;
+  --muted: #8d847c;
+  --canvas: #f7f0e7;
+  --paper: rgba(255, 251, 244, 0.82);
+  --line: rgba(117, 91, 70, 0.18);
+  --coral: #eb7c6b;
+  --lavender: #8d6bcc;
+  --sage: #769d74;
+  --shadow: 0 18px 48px rgba(87, 62, 43, 0.06);
+  --font-sans: "DM Sans", system-ui, sans-serif;
+  --font-serif: "Cormorant Garamond", Georgia, serif;
+}
+
+* { box-sizing: border-box; margin: 0; }
+
+html { background: #e9ddd0; }
+
+body {
+  margin: 0;
+  min-width: 320px;
+  background:
+    radial-gradient(circle at 48% 22%, rgba(255,255,255,0.96), transparent 34%),
+    linear-gradient(135deg, #f7f1e8, #fdf9f2 48%, #f2e9dd);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  -webkit-font-smoothing: antialiased;
+}
+
+.app-shell {
+  min-height: 100vh;
+  padding: 22px 24px 24px;
+  overflow: hidden;
+}
+
+.topbar {
+  height: 68px;
+  display: grid;
+  grid-template-columns: minmax(300px, 1fr) auto minmax(260px, 1fr) auto;
+  align-items: center;
+  gap: 22px;
+  max-width: 1720px;
+  margin: 0 auto;
+}
+
+.brand {
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+}
+
+.brand strong {
+  font: 500 clamp(28px, 2.2vw, 42px)/1 var(--font-serif), serif;
+  letter-spacing: -0.04em;
+  white-space: nowrap;
+}
+
+.brand sup { color: var(--coral); font: 400 14px var(--font-sans), sans-serif; padding-left: 3px; }
+.brand em {
+  color: var(--lavender);
+  font-family: "Comic Sans MS", "Bradley Hand", cursive;
+  font-style: italic;
+  letter-spacing: .01em;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.main-nav {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+}
+
+.main-nav button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 0;
+  padding: 12px 15px;
+  border-radius: 999px;
+  background: transparent;
+  cursor: pointer;
+  white-space: nowrap;
+  font: inherit;
+  color: inherit;
+}
+.main-nav button.active { background: rgba(238, 124, 106, .075); box-shadow: inset 0 0 0 1px rgba(215, 112, 91, .12); }
+
+.search-box {
+  justify-self: end;
+  width: min(100%, 280px);
+  height: 44px;
+  padding: 0 16px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: rgba(255,255,255,.28);
+  color: var(--muted);
+}
+.search-box input { width: 100%; border: 0; outline: 0; background: transparent; color: var(--ink); font-size: 12px; }
+.search-box input::placeholder { color: #a49b93; }
+
+.workspace {
+  max-width: 1720px;
+  height: min(760px, calc(100vh - 128px));
+  min-height: 620px;
+  margin: 12px auto 0;
+  display: grid;
+  grid-template-columns: 285px minmax(620px, 1fr) 330px;
+  gap: 18px;
+}
+
+.organ-library, .viewer-shell, .info-panel {
+  border: 1px solid var(--line);
+  border-radius: 26px;
+  background: var(--paper);
+  box-shadow: var(--shadow), inset 0 1px 0 rgba(255,255,255,.75);
+}
+
+.organ-library { padding: 16px 14px 14px; display: flex; flex-direction: column; min-height: 0; }
+.panel-heading { height: 33px; display: flex; align-items: center; justify-content: space-between; padding: 0 5px 10px; }
+.panel-heading > span {
+  text-transform: uppercase;
+  letter-spacing: .13em;
+  font-size: 10px;
+  font-weight: 600;
+}
+.panel-heading button { border: 1px solid var(--line); background: rgba(255,255,255,.3); width: 32px; height: 32px; border-radius: 9px; display: grid; place-items: center; cursor: pointer; }
+.panel-heading .mobile-close { display: none; }
+
+.organ-list { display: flex; flex-direction: column; gap: 4px; min-height: 0; overflow: auto; scrollbar-width: none; flex: 1; }
+.organ-list::-webkit-scrollbar { display: none; }
+
+.organ-item {
+  width: 100%;
+  min-height: 70px;
+  display: grid;
+  grid-template-columns: 54px 1fr 18px;
+  align-items: center;
+  gap: 8px;
+  text-align: left;
+  padding: 8px 10px;
+  border: 1px solid transparent;
+  border-radius: 15px;
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+  transition: background 0.2s, border-color 0.2s, box-shadow 0.2s;
+}
+.organ-item:hover { background: rgba(253,234,226,.35); }
+.organ-item.active {
+  background: rgba(253,234,226,.72);
+  border-color: rgba(235, 124, 107, 0.45);
+  box-shadow: 0 8px 20px rgba(195,91,70,.07);
+}
+
+.organ-glyph {
+  width: 47px;
+  height: 47px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  background: radial-gradient(circle at 35% 28%, #fff, #fce8e2);
+  box-shadow: inset 0 0 0 1px rgba(121,86,67,.07);
+  font-size: 21px;
+  line-height: 1;
+  font-family: var(--font-serif), serif;
+  color: #b85a4a;
+}
+.organ-item b { display: block; font: 500 17px/1.1 var(--font-serif), serif; }
+.organ-item small { display: block; margin-top: 5px; color: var(--muted); font-size: 10px; }
+
+.viewer-shell {
+  position: relative;
+  overflow: hidden;
+  min-width: 0;
+  background:
+    radial-gradient(circle at 55% 45%, rgba(255,255,255,.92), rgba(255,250,242,.72) 45%, rgba(246,236,224,.7)),
+    var(--paper);
+}
+.viewer-shell:after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  box-shadow: inset 0 0 90px rgba(124,82,51,.04);
+}
+
+.viewer-glow {
+  position: absolute;
+  width: 420px;
+  height: 420px;
+  left: 50%;
+  top: 47%;
+  transform: translate(-50%,-50%);
+  border-radius: 50%;
+  background: rgba(235, 124, 107, 0.06);
+  filter: blur(72px);
+  opacity: .55;
+  transition: background 0.6s ease;
+  pointer-events: none;
+}
+
+.three-mount {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+}
+.three-mount canvas {
+  width: 100% !important;
+  height: 100% !important;
+  display: block;
+  touch-action: none;
+}
+
+.viewer-tools {
+  position: absolute;
+  left: 18px;
+  top: 50%;
+  z-index: 3;
+  transform: translateY(-50%);
+  width: 62px;
+  padding: 8px 5px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  background: rgba(253,250,244,.82);
+  backdrop-filter: blur(18px);
+  box-shadow: 0 12px 30px rgba(75,54,40,.08);
+}
+.tool-button {
+  height: 60px;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  cursor: pointer;
+  font: 500 9px/1 var(--font-serif), serif;
+  color: inherit;
+  transition: color 0.15s, background 0.15s;
+}
+.tool-button:hover { background: rgba(0,0,0,.03); }
+.tool-button.active { color: var(--coral); background: rgba(238,124,106,.08); }
+.tool-button:nth-last-child(1) { border-top: 1px solid var(--line); border-radius: 0 0 12px 12px; margin-top: 2px; padding-top: 2px; }
+
+.tip-note {
+  position: absolute;
+  right: 16px;
+  top: 18px;
+  z-index: 2;
+  width: 155px;
+  min-height: 140px;
+  padding: 14px 17px;
+  transform: rotate(-4deg);
+  background: #fff2c9;
+  box-shadow: 0 7px 13px rgba(93,69,43,.13);
+  color: #534a43;
+  pointer-events: none;
+}
+.tip-note span { display: flex; align-items: center; gap: 4px; color: var(--lavender); font: italic 12px "Comic Sans MS", cursive; }
+.tip-note p { margin: 8px 0 0; font: 500 14px/1.55 var(--font-serif), serif; }
+
+.hotspot-callout {
+  position: absolute;
+  left: 0;
+  top: 0;
+  z-index: 5;
+  width: 0;
+  height: 0;
+  will-change: transform;
+  pointer-events: none;
+}
+.callout-body {
+  position: absolute;
+  top: -30px;
+  width: 168px;
+  padding: 10px 26px 11px 12px;
+  border: 1px solid rgba(116,89,67,.14);
+  border-radius: 13px;
+  background: rgba(255,252,247,.92);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 0 0 1px rgba(235, 124, 107, 0.22), 0 12px 28px rgba(83,59,42,.12);
+  animation: callout-in .26s cubic-bezier(.2,.85,.3,1);
+  transition: opacity .2s ease;
+  pointer-events: auto;
+}
+.hotspot-callout[data-side="right"] .callout-body { left: 22px; }
+.hotspot-callout[data-side="left"] .callout-body { right: 22px; }
+.hotspot-callout[data-behind="true"] .callout-body { opacity: .3; }
+.callout-body:before {
+  content: "";
+  position: absolute;
+  top: 32px;
+  width: 18px;
+  height: 1px;
+  background: var(--coral);
+  opacity: .55;
+}
+.hotspot-callout[data-side="right"] .callout-body:before { right: 100%; }
+.hotspot-callout[data-side="left"] .callout-body:before { left: 100%; }
+.callout-body b { display: block; padding-left: 13px; font: 500 13px var(--font-serif), serif; }
+.callout-body b:before { content: ""; position: absolute; left: 12px; top: 15px; width: 7px; height: 7px; border-radius: 50%; background: var(--coral); }
+.callout-body small { display: block; margin-top: 3px; padding-left: 13px; color: var(--muted); font-size: 10px; line-height: 1.35; }
+.callout-close { position: absolute; top: 6px; right: 6px; width: 20px; height: 20px; display: grid; place-items: center; border: 0; border-radius: 50%; background: transparent; color: var(--muted); cursor: pointer; }
+.callout-close:hover { background: rgba(116,89,67,.09); }
+@keyframes callout-in { from { opacity: 0; transform: translateX(-6px) scale(.96); } }
+
+.hotspot-index {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.auto-rotate {
+  position: absolute;
+  right: 17px;
+  bottom: 16px;
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid var(--line);
+  border-radius: 13px;
+  padding: 8px 10px 8px 12px;
+  background: rgba(255,252,247,.88);
+  box-shadow: 0 5px 14px rgba(65,45,32,.08);
+  cursor: pointer;
+  font: 500 10px var(--font-serif), serif;
+  color: inherit;
+}
+.switch { width: 29px; height: 17px; padding: 2px; border-radius: 99px; background: #c8c2bb; transition: background 0.2s; }
+.switch i { display: block; width: 13px; height: 13px; border-radius: 50%; background: white; box-shadow: 0 1px 4px rgba(0,0,0,.17); transition: margin 0.2s; }
+.switch.on { background: #70a9cb; }
+.switch.on i { margin-left: 12px; }
+
+.view-caption {
+  position: absolute;
+  left: 98px;
+  bottom: 17px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  color: var(--muted);
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: .1em;
+  pointer-events: none;
+}
+.view-caption strong { color: var(--ink); font: 500 13px var(--font-serif), serif; text-transform: none; letter-spacing: 0; }
+
+.model-loader {
+  position: absolute;
+  inset: 0;
+  z-index: 6;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 8px;
+  background: rgba(251,246,238,.45);
+  backdrop-filter: blur(4px);
+  transition: opacity 0.3s;
+}
+.model-loader.hidden { opacity: 0; pointer-events: none; }
+.model-loader strong { font: 500 18px var(--font-serif), serif; }
+.model-loader span { color: var(--muted); font-size: 10px; }
+.loader-orbit {
+  width: 48px;
+  height: 48px;
+  border: 1px dashed var(--coral);
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  color: var(--coral);
+  animation: orbit 2.4s linear infinite;
+}
+@keyframes orbit { to { transform: rotate(360deg); } }
+
+.error-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  background: rgba(251,246,238,.92);
+  backdrop-filter: blur(8px);
+  padding: 40px;
+  text-align: center;
+}
+.error-overlay.visible { display: flex; }
+.error-overlay h3 { font: 500 22px var(--font-serif), serif; color: #b85a4a; }
+.error-overlay p { color: var(--muted); font-size: 13px; max-width: 400px; line-height: 1.5; }
+.error-overlay code { background: rgba(0,0,0,.05); padding: 2px 6px; border-radius: 4px; font-size: 12px; }
+
+.info-panel {
+  padding: 21px 20px 17px;
+  overflow: auto;
+  scrollbar-width: none;
+}
+.info-panel::-webkit-scrollbar { display: none; }
+
+.info-kicker {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: #795c55;
+  text-transform: uppercase;
+  letter-spacing: .13em;
+  font-size: 10px;
+  font-weight: 600;
+}
+.info-kicker svg { color: #ee8a7a; }
+
+.info-title-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-top: 15px;
+}
+.info-title-row h1 { margin: 0; font: 500 44px/.95 var(--font-serif), serif; letter-spacing: -.02em; }
+.info-title-row em { display: block; margin-top: 8px; font-size: 13px; color: var(--lavender); font-family: "Comic Sans MS", cursive; font-style: italic; }
+
+.specimen-stamp {
+  width: 86px;
+  height: 86px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  overflow: hidden;
+  background: radial-gradient(circle, #fff 25%, rgba(237,142,120,.12));
+  font-size: 42px;
+  line-height: 1;
+  font-family: var(--font-serif), serif;
+  color: #b85a4a;
+}
+
+.description { margin: 22px 0 16px; font: 500 15px/1.42 var(--font-serif), serif; }
+.rule { height: 1px; background: var(--line); }
+
+.info-panel h2 {
+  margin: 17px 0 10px;
+  font-style: italic;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: .13em;
+  font-size: 10px;
+}
+
+.key-facts { margin: 0; display: flex; flex-direction: column; gap: 11px; }
+.key-facts > div { display: grid; grid-template-columns: 105px 1fr; gap: 8px; align-items: baseline; }
+.key-facts dt { display: flex; gap: 8px; font: 500 13px var(--font-serif), serif; }
+.key-facts dt span { color: var(--coral); width: 16px; }
+.key-facts dd { margin: 0; color: var(--muted); font: 500 12px/1.35 var(--font-serif), serif; }
+
+.medical-note, .fun-note {
+  margin-top: 15px;
+  display: flex;
+  gap: 9px;
+  padding: 10px;
+  border-radius: 12px;
+}
+.medical-note { background: rgba(142,109,197,.065); color: #6d568f; }
+.fun-note { background: rgba(198,154,94,.09); color: #86663c; }
+.medical-note p, .fun-note p { margin: 0; font: 500 11px/1.35 var(--font-serif), serif; }
+.medical-note b, .fun-note b { display: block; margin-bottom: 2px; color: var(--ink); }
+
+.lesson-button {
+  width: 100%;
+  min-height: 42px;
+  margin-top: 14px;
+  padding: 0 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border: 0;
+  border-radius: 10px;
+  background: linear-gradient(110deg, #ed8a72, #e87868);
+  color: white;
+  cursor: pointer;
+  box-shadow: 0 9px 20px rgba(208,90,70,.16);
+  font-size: 11px;
+  font: inherit;
+}
+
+.action-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 9px;
+}
+.action-grid button {
+  min-height: 36px;
+  border: 1px solid #c9b3df;
+  border-radius: 9px;
+  background: rgba(255,255,255,.18);
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: center;
+  color: #8062b6;
+  cursor: pointer;
+  font-size: 10px;
+  font: inherit;
+  transition: background 0.15s;
+}
+.action-grid button:nth-child(2) { border-color: #bdcfaa; color: #789067; }
+.action-grid button:last-child { grid-column: 1/-1; border-color: #b9c6e3; color: #6e88bd; }
+.action-grid button.active { background: rgba(111,137,192,.1); box-shadow: inset 0 0 0 1px #8ca2d0; }
+
+.learning-cards {
+  --art-max: 220px;
+  --card-gap-top: 8px;
+  --card-gap-bottom: 12px;
+  max-width: 1720px;
+  margin: 18px auto 0;
+  display: grid;
+  grid-template-columns: 1.05fr repeat(5, 1fr);
+  gap: 16px;
+}
+.learning-cards article {
+  min-height: 212px;
+  min-width: 0;
+  border: 1px solid var(--line);
+  border-radius: 23px;
+  background: rgba(255,251,244,.68);
+  box-shadow: var(--shadow);
+  padding: 13px 14px 12px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.learning-cards article > header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  min-height: 38px;
+  flex: none;
+}
+.learning-cards em {
+  display: block;
+  text-transform: uppercase;
+  font-size: 10px;
+  color: var(--lavender);
+  font-family: "Comic Sans MS", cursive;
+  font-style: italic;
+}
+.learning-cards h3 { margin: 3px 0 0; font: 500 13px/1.2 var(--font-serif), serif; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.curiosity-card {
+  justify-content: center;
+  padding-left: 28px !important;
+  background: linear-gradient(145deg, rgba(255,247,234,.7), rgba(247,231,210,.86)) !important;
+}
+.curiosity-card span { color: #c8a0b8; font-size: 28px; }
+.curiosity-card p { margin: 5px 0 10px; font: 500 16px/1.4 var(--font-serif), serif; }
+.curiosity-card em { text-transform: none; font-size: 13px; }
+
+.art-fallback {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  background: radial-gradient(circle at 40% 32%, #fff, #fce8e2);
+  color: #b85a4a;
+  font-family: var(--font-serif), serif;
+  font-size: 34px;
+  line-height: 1;
+}
+.organ-card-image .art-fallback { font-size: 42px; }
+
+.organ-card-image {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  flex: none;
+  width: min(100%, var(--art-max));
+  max-width: 100%;
+  aspect-ratio: 1;
+  margin: var(--card-gap-top) auto var(--card-gap-bottom);
+  border-radius: 16px;
+}
+
+.learning-cards ul {
+  list-style: none;
+  padding: 0;
+  margin: var(--card-gap-top) 0 var(--card-gap-bottom);
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 9px;
+  font: 500 11px var(--font-serif), serif;
+}
+.learning-cards li:before { content: "♥"; color: #e9968b; margin-right: 7px; }
+
+.view-all {
+  min-height: 36px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: rgba(255,255,255,.24);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 13px;
+  cursor: pointer;
+  font: 500 12px var(--font-serif), serif;
+  color: inherit;
+  margin-top: auto;
+}
+
+.drawer-backdrop { display: none; }
+
+@media (max-width: 1350px) {
+  .app-shell { padding: 16px; }
+  .topbar { grid-template-columns: 1fr auto auto; gap: 12px; }
+  .brand em { display: none; }
+  .search-box { display: none; }
+  .workspace { grid-template-columns: 250px minmax(500px,1fr) 300px; height: min(700px, calc(100vh - 105px)); }
+  .learning-cards { grid-template-columns: repeat(3, 1fr); --art-max: 300px; }
+}
+
+@media (max-width: 1040px) {
+  .topbar { grid-template-columns: 1fr auto auto; }
+  .main-nav button span { display: none; }
+  .main-nav button { padding: 10px; }
+  .workspace { grid-template-columns: 210px minmax(450px,1fr); height: 690px; }
+  .info-panel {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: 1fr 1.2fr;
+    gap: 12px 22px;
+    max-height: none;
+    height: 330px;
+  }
+  .info-panel .description, .info-panel .rule, .info-panel h2, .key-facts, .medical-note { grid-column: 2; }
+  .info-kicker, .info-title-row { grid-column: 1; }
+  .workspace { height: auto; }
+  .organ-library, .viewer-shell { height: 650px; }
+  .learning-cards { grid-template-columns: repeat(3, 1fr); }
+}
+
+@media (max-width: 760px) {
+  .app-shell { padding: 10px; overflow: hidden; }
+  .topbar { height: 58px; grid-template-columns: 1fr auto auto; }
+  .brand strong { font-size: 29px; }
+  .main-nav { display: none; }
+  .workspace { display: block; margin-top: 8px; }
+  .viewer-shell { height: 68vh; min-height: 520px; border-radius: 22px; }
+  .organ-library {
+    position: fixed;
+    z-index: 42;
+    left: 8px;
+    right: 8px;
+    bottom: 8px;
+    height: min(76vh, 650px);
+    transform: translateY(110%);
+    border-radius: 26px;
+    background: #fffaf3;
+    transition: transform 0.35s cubic-bezier(.2,.85,.3,1);
+  }
+  .organ-library.open { transform: translateY(0); }
+  .panel-heading .mobile-close { display: grid; margin-left: auto; margin-right: 7px; }
+  .drawer-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 40;
+    border: 0;
+    background: rgba(52,39,30,.24);
+    backdrop-filter: blur(5px);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s;
+  }
+  .drawer-backdrop.open { opacity: 1; pointer-events: auto; }
+  .organ-list { display: grid; grid-template-columns: 1fr 1fr; }
+  .organ-item { min-height: 76px; }
+  .info-panel { height: auto; margin-top: 10px; display: block; border-radius: 22px; }
+  .learning-cards { grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; --art-max: 320px; }
+  .learning-cards article { border-radius: 20px; }
+  .curiosity-card { display: none !important; }
+  .viewer-tools {
+    top: auto;
+    bottom: 12px;
+    left: 10px;
+    right: 10px;
+    transform: none;
+    width: auto;
+    height: 61px;
+    flex-direction: row;
+    justify-content: space-around;
+    padding: 4px;
+    border-radius: 15px;
+  }
+  .tool-button { width: 51px; height: 51px; }
+  .tool-button:nth-last-child(1) { border: 0; border-radius: 12px; }
+  .tool-button span { display: none; }
+  .auto-rotate { bottom: 82px; right: 10px; }
+  .view-caption { left: 12px; bottom: 84px; }
+  .tip-note { width: 130px; min-height: 113px; padding: 11px; }
+  .tip-note p { font-size: 12px; }
+  .callout-body { width: 148px; top: -26px; }
+}
+
+@media (max-width: 470px) {
+  .brand strong { font-size: 25px; }
+  .viewer-shell { min-height: 485px; height: 66vh; }
+  .organ-list { grid-template-columns: 1fr; }
+  .learning-cards { grid-template-columns: 1fr; --art-max: 360px; }
+  .organ-library .view-all { margin-bottom: 8px; }
+  .tip-note { display: none; }
+  .specimen-stamp { width: 68px; height: 68px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *:before, *:after {
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+</style>
+</head>
+<body>
+<div class="app-shell">
+  <header class="topbar">
+    <button class="brand" onclick="app && app.selectOrgan && app.selectOrgan('heart')">
+      <strong>Anatomy Atelier</strong>
+      <sup>3D</sup>
+      <em>by thebuggeddev</em>
+    </button>
+    <nav class="main-nav" id="mainNav"></nav>
+    <div class="search-box">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+      <input type="text" placeholder="Search organs…" id="searchInput" autocomplete="off">
+    </div>
+    <button class="profile" aria-label="Profile" style="width:40px;height:40px;border-radius:50%;border:1px solid var(--line);background:rgba(255,255,255,.3);display:grid;place-items:center;font-weight:600;cursor:pointer;">
+      <span>AA</span>
+    </button>
+    <button class="mobile-library-trigger" id="mobileLibraryTrigger" aria-label="Open organ library" style="display:none;width:40px;height:40px;border-radius:50%;border:1px solid var(--line);background:rgba(255,255,255,.3);display:grid;place-items:center;cursor:pointer;">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h18M3 6h18M3 18h18"/></svg>
+    </button>
+  </header>
+
+  <div class="workspace">
+    <aside class="organ-library" id="organLibrary">
+      <div class="panel-heading">
+        <span>Specimen Library</span>
+        <button class="mobile-close" id="mobileLibraryClose" aria-label="Close">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <div class="organ-list" id="organList"></div>
+      <button class="view-all">View all systems <span>→</span></button>
+    </aside>
+
+    <div class="viewer-shell" id="viewerShell">
+      <div class="viewer-glow" id="viewerGlow"></div>
+      <div class="three-mount" id="threeMount" role="img" aria-label="Interactive 3D anatomy model"></div>
+
+      <div class="viewer-tools" id="viewerTools">
+        <button class="tool-button" data-tool="reset" title="Reset view">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+          <span>Reset</span>
+        </button>
+        <button class="tool-button" data-tool="zoomIn" title="Zoom in">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3M11 8v6M8 11h6"/></svg>
+          <span>Zoom</span>
+        </button>
+        <button class="tool-button" data-tool="isolate" title="Isolate specimen">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+          <span>Isolate</span>
+        </button>
+        <button class="tool-button" data-tool="crossSection" title="Cross-section">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M12 2v20"/></svg>
+          <span>Slice</span>
+        </button>
+        <button class="tool-button" data-tool="layers" title="Toggle wireframe">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 2 2 7l10 5 10-5-10-5Z"/><path d="m2 17 10 5 10-5"/><path d="m2 12 10 5 10-5"/></svg>
+          <span>Layers</span>
+        </button>
+        <button class="tool-button" data-tool="compare" title="Compare organs">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M16 3h3v3h-3zM8 3h3v3H8zM5 8h14v12a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V8zM12 12v4"/></svg>
+          <span>Compare</span>
+        </button>
+      </div>
+
+      <div class="tip-note" id="tipNote">
+        <span>Did you know?</span>
+        <p id="tipText">The heart beats roughly 2.5 billion times in an average lifetime.</p>
+      </div>
+
+      <div class="hotspot-callout" id="hotspotCallout" style="display:none">
+        <div class="callout-body">
+          <button class="callout-close" id="calloutClose" aria-label="Close callout">×</button>
+          <b id="calloutLabel">Label</b>
+          <small id="calloutDetail">Detail</small>
+        </div>
+      </div>
+
+      <ul class="hotspot-index" id="hotspotIndex" aria-label="Anatomy hotspots"></ul>
+
+      <button class="auto-rotate" id="autoRotateBtn" aria-pressed="true">
+        <div class="switch on" id="autoRotateSwitch"><i></i></div>
+        Auto-rotate
+      </button>
+
+      <div class="view-caption">
+        <strong id="captionOrgan">Heart</strong>
+        <span>3D specimen · click a dot to explore</span>
+      </div>
+
+      <div class="model-loader hidden" id="modelLoader">
+        <div class="loader-orbit">♥</div>
+        <strong id="loaderText">Preparing the heart</strong>
+        <span id="loaderPercent">0%</span>
+      </div>
+
+      <div class="error-overlay" id="errorOverlay">
+        <h3>⚠️ Something went wrong</h3>
+        <p id="errorMessage">Could not load the 3D viewer. Make sure you are running this from a web server, not by opening the file directly.</p>
+        <p style="font-size:11px;margin-top:4px;">Try: <code>python3 -m http.server 8000</code></p>
+      </div>
+    </div>
+
+    <aside class="info-panel" id="infoPanel">
+      <div id="infoContent">
+        <div class="info-kicker">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2 2 7l10 5 10-5-10-5Z"/><path d="m2 17 10 5 10-5"/><path d="m2 12 10 5 10-5"/></svg>
+          <span id="infoSystem">Cardiovascular System</span>
+        </div>
+        <div class="info-title-row">
+          <div>
+            <h1 id="infoName">Heart</h1>
+            <em id="infoScientific">Cor</em>
+          </div>
+          <div class="specimen-stamp" id="infoStamp">♥</div>
+        </div>
+        <p class="description" id="infoDescription">A muscular organ that pumps blood throughout the body, delivering oxygen and nutrients to every cell.</p>
+        <div class="rule"></div>
+        <h2>Key Facts</h2>
+        <dl class="key-facts" id="infoFacts"></dl>
+        <div class="medical-note">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+          <p><b>Medical note</b> <span id="infoMedical">Its electrical rhythm coordinates every heartbeat.</span></p>
+        </div>
+        <div class="fun-note">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+          <p><b>Did you know?</b> <span id="infoFunFact">It beats roughly 2.5 billion times in an average lifetime, and starts before you are born.</span></p>
+        </div>
+        <button class="lesson-button">Start Lesson <span>→</span></button>
+        <div class="action-grid">
+          <button>🔍 Structure</button>
+          <button>🩺 Function</button>
+          <button>📍 Location in Body</button>
+        </div>
+      </div>
+    </aside>
+  </div>
+
+  <section class="learning-cards" id="learningCards"></section>
+</div>
+
+<button class="drawer-backdrop" id="drawerBackdrop" aria-label="Close drawer"></button>
+
+<script type="module" src="js/app.js"></script>
+
+<script>
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js').catch(() => {});
+}
+</script>
+</body>
+</html>
