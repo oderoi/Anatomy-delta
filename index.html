@@ -781,7 +781,8 @@ body {
     <button class="profile" aria-label="Profile" style="width:40px;height:40px;border-radius:50%;border:1px solid var(--line);background:rgba(255,255,255,.3);display:grid;place-items:center;font-weight:600;cursor:pointer;">
       <span>AA</span>
     </button>
-    <button class="mobile-library-trigger" id="mobileLibraryTrigger" aria-label="Open organ library" style="display:none;width:40px;height:40px;border-radius:50%;border:1px solid var(--line);background:rgba(255,255,255,.3);display:grid;place-items:center;cursor:pointer;">
+    <!-- FIX: removed conflicting inline display:none so CSS media query controls visibility -->
+    <button class="mobile-library-trigger" id="mobileLibraryTrigger" aria-label="Open organ library" style="width:40px;height:40px;border-radius:50%;border:1px solid var(--line);background:rgba(255,255,255,.3);display:grid;place-items:center;cursor:pointer;">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h18M3 6h18M3 18h18"/></svg>
     </button>
   </header>
@@ -831,7 +832,7 @@ body {
 
       <div class="tip-note" id="tipNote">
         <span>Did you know?</span>
-        <p id="tipText">The heart beats roughly 2.5 billion times in an average lifetime.</p>
+        <p id="tipText">The human body contains 79 organs. Select one to begin exploring.</p>
       </div>
 
       <div class="hotspot-callout" id="hotspotCallout" style="display:none">
@@ -850,13 +851,13 @@ body {
       </button>
 
       <div class="view-caption">
-        <strong id="captionOrgan">Heart</strong>
-        <span>3D specimen · click a dot to explore</span>
+        <strong id="captionOrgan">No specimen selected</strong>
+        <span>Choose an organ from the library</span>
       </div>
 
       <div class="model-loader hidden" id="modelLoader">
         <div class="loader-orbit">♥</div>
-        <strong id="loaderText">Preparing the heart</strong>
+        <strong id="loaderText">Preparing specimen</strong>
         <span id="loaderPercent">0%</span>
       </div>
 
@@ -864,6 +865,8 @@ body {
         <h3>⚠️ Something went wrong</h3>
         <p id="errorMessage">Could not load the 3D viewer. Make sure you are running this from a web server, not by opening the file directly.</p>
         <p style="font-size:11px;margin-top:4px;">Try: <code>python3 -m http.server 8000</code></p>
+        <!-- FIX: added close button so users can dismiss the error and try another organ -->
+        <button id="errorClose" style="margin-top:8px;padding:8px 16px;border:1px solid var(--line);border-radius:8px;background:rgba(255,255,255,.4);cursor:pointer;font:inherit;color:var(--ink);">Dismiss</button>
       </div>
     </div>
 
@@ -871,26 +874,26 @@ body {
       <div id="infoContent">
         <div class="info-kicker">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2 2 7l10 5 10-5-10-5Z"/><path d="m2 17 10 5 10-5"/><path d="m2 12 10 5 10-5"/></svg>
-          <span id="infoSystem">Cardiovascular System</span>
+          <span id="infoSystem">Anatomy Atelier</span>
         </div>
         <div class="info-title-row">
           <div>
-            <h1 id="infoName">Heart</h1>
-            <em id="infoScientific">Cor</em>
+            <h1 id="infoName">Welcome</h1>
+            <em id="infoScientific"> </em>
           </div>
-          <div class="specimen-stamp" id="infoStamp">♥</div>
+          <div class="specimen-stamp" id="infoStamp">✦</div>
         </div>
-        <p class="description" id="infoDescription">A muscular organ that pumps blood throughout the body, delivering oxygen and nutrients to every cell.</p>
+        <p class="description" id="infoDescription">Select an organ from the library to explore its 3D model, hotspots, and key facts.</p>
         <div class="rule"></div>
         <h2>Key Facts</h2>
         <dl class="key-facts" id="infoFacts"></dl>
         <div class="medical-note">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
-          <p><b>Medical note</b> <span id="infoMedical">Its electrical rhythm coordinates every heartbeat.</span></p>
+          <p><b>Medical note</b> <span id="infoMedical">Ready to explore human anatomy.</span></p>
         </div>
         <div class="fun-note">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
-          <p><b>Did you know?</b> <span id="infoFunFact">It beats roughly 2.5 billion times in an average lifetime, and starts before you are born.</span></p>
+          <p><b>Did you know?</b> <span id="infoFunFact">The human body contains 79 organs. Choose one to begin.</span></p>
         </div>
         <button class="lesson-button">Start Lesson <span>→</span></button>
         <div class="action-grid">

@@ -16,7 +16,7 @@ function showError(msg) {
 
 class AnatomyApp {
   constructor() {
-    this.currentOrganId = 'heart';
+    this.currentOrganId = null; // nothing selected on startup
     this.viewer = null;
     this.compareMode = false;
     this.systems = [...new Set(organs.map((o) => o.system))];
@@ -29,7 +29,7 @@ class AnatomyApp {
       this.renderLearningCards();
       this.initViewer();
       this.bindEvents();
-      this.selectOrgan('heart');
+      // do NOT auto-load any organ
       console.log('Anatomy Atelier initialized successfully');
     } catch (err) {
       showError('Failed to initialize: ' + err.message);
@@ -136,7 +136,8 @@ class AnatomyApp {
   }
 
   async selectOrgan(id) {
-    if (this.currentOrganId === id) return;
+    // allow re-click if the model never actually loaded
+    if (this.currentOrganId === id && this.viewer?.organ) return;
     const organ = organById[id];
     if (!organ) {
       console.error('Organ not found:', id);
@@ -286,6 +287,10 @@ class AnatomyApp {
       this.viewer.clearSelection();
       $('#hotspotCallout').style.display = 'none';
     };
+
+    // Error overlay close
+    const errorClose = $('#errorClose');
+    if (errorClose) errorClose.onclick = () => $('#errorOverlay').classList.remove('visible');
 
     // Keyboard
     document.addEventListener('keydown', (e) => {

@@ -541,14 +541,22 @@ export class AnatomyViewer {
       this.hotspots.clear();
       this.busy(0.8);
       await this.tween(outgoing.pivot.scale, { x: 0.72, y: 0.72, z: 0.72, duration: 0.34, ease: 'power2.in' });
+      if (request !== this.loadRequest) return;
       this.assets.release(outgoing);
       this.organ = null; this.dirty = true;
     }
+    if (request !== this.loadRequest) return;
     this.tween(this.camera.position, { z: 9.2, duration: 0.42, ease: 'power2.inOut' });
     let organ;
     try {
       organ = await this.assets.load(modelUrl, (p) => { if (request === this.loadRequest) this.callbacks.onLoading(true, p); });
-    } catch (e) { if (request === this.loadRequest) this.callbacks.onLoading(false, 0); throw e; }
+    } catch (e) { 
+      if (request === this.loadRequest) {
+        this.callbacks.onLoading(false, 0);
+        this.organ = null; 
+      }
+      throw e; 
+    }
     if (request !== this.loadRequest || this.disposed) return;
     this.organ = organ;
     organ.pivot.scale.setScalar(1); organ.pivot.position.set(0,0,0);
