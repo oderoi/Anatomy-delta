@@ -123,7 +123,69 @@ class AnatomyApp {
     });
   }
 
-  async selectOrgan(id) {
+  // async selectOrgan(id) {
+  //   if (this.currentOrganId === id && this.viewer?.organ) return;
+  //   const organ = organById[id];
+  //   if (!organ) {
+  //     console.error('Organ not found:', id);
+  //     return;
+  //   }
+  //   this.currentOrganId = id;
+
+  //   $$('.organ-item').forEach((btn) => btn.classList.toggle('active', btn.dataset.id === id));
+  //   $$('.main-nav button').forEach((btn, i) => {
+  //     btn.classList.toggle('active', this.systems[i] === organ.system);
+  //   });
+
+  //   $('#infoSystem').textContent = organ.system;
+  //   $('#infoName').textContent = organ.name;
+  //   $('#infoScientific').textContent = organ.scientificName;
+  //   $('#infoStamp').textContent = organ.icon;
+  //   $('#infoStamp').style.color = organ.accent;
+  //   $('#infoDescription').textContent = organ.description;
+  //   $('#infoMedical').textContent = organ.medical;
+  //   $('#infoFunFact').textContent = organ.funFact;
+  //   $('#captionOrgan').textContent = organ.name;
+  //   $('#viewerGlow').style.background = organ.accent + '0F';
+  //   $('#tipText').textContent = organ.funFact;
+
+  //   const facts = [
+  //     { label: 'Size', value: organ.size, icon: '◎' },
+  //     { label: 'Weight', value: organ.weight, icon: '⚖' },
+  //     { label: 'Location', value: organ.location, icon: '⌖' },
+  //     { label: 'Function', value: organ.function, icon: '⚙' },
+  //     { label: 'Tissue', value: organ.tissue, icon: '◈' },
+  //     { label: 'Blood Supply', value: organ.bloodSupply, icon: '♥' },
+  //   ];
+  //   $('#infoFacts').innerHTML = facts.map((f) => `
+  //     <div>
+  //       <dt><span>${f.icon}</span> ${f.label}</dt>
+  //       <dd>${f.value}</dd>
+  //     </div>
+  //   `).join('');
+
+  //   $('#hotspotIndex').innerHTML = organ.hotspots.map((h) => `
+  //     <li><button onclick="app.selectHotspot('${h.id}')">${h.label}: ${h.detail}</button></li>
+  //   `).join('');
+
+  //   // Load 3D model — viewer handles retries internally, never throws to us
+  //   const ok = await this.viewer.setOrgan(organ.model, organ.hotspots, organ.accent);
+  //   if (!ok) {
+  //     console.warn('Model load failed for', organ.name, '- user can click again to retry');
+  //     // Reset currentOrganId so the user can click the same organ again
+  //     this.currentOrganId = null;
+  //     $$('.organ-item').forEach((btn) => btn.classList.remove('active'));
+  //     return;
+  //   }
+
+  //   const idx = organs.findIndex((o) => o.id === id);
+  //   [1, 2].forEach((offset) => {
+  //     const next = organs[(idx + offset) % organs.length];
+  //     this.viewer.prefetch(next.model);
+  //   });
+  // }
+
+    async selectOrgan(id) {
     if (this.currentOrganId === id && this.viewer?.organ) return;
     const organ = organById[id];
     if (!organ) {
@@ -168,13 +230,12 @@ class AnatomyApp {
       <li><button onclick="app.selectHotspot('${h.id}')">${h.label}: ${h.detail}</button></li>
     `).join('');
 
-    // Load 3D model — viewer handles retries internally, never throws to us
     const ok = await this.viewer.setOrgan(organ.model, organ.hotspots, organ.accent);
     if (!ok) {
-      console.warn('Model load failed for', organ.name, '- user can click again to retry');
-      // Reset currentOrganId so the user can click the same organ again
+      console.warn('Model load failed for', organ.name);
       this.currentOrganId = null;
       $$('.organ-item').forEach((btn) => btn.classList.remove('active'));
+      this.onLoading(false, 0);
       return;
     }
 

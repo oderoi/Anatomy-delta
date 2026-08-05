@@ -883,6 +883,23 @@ body {
 
 <button class="drawer-backdrop" id="drawerBackdrop" aria-label="Close drawer"></button>
 
+<!-- Service Worker kill-switch: guarantees new code is never blocked by old caches -->
+<script>
+(async function() {
+  if (!('serviceWorker' in navigator)) return;
+  const regs = await navigator.serviceWorker.getRegistrations();
+  let hadOld = false;
+  for (const reg of regs) {
+    await reg.unregister();
+    hadOld = true;
+  }
+  if (hadOld && !window.__swReloaded__) {
+    window.__swReloaded__ = true;
+    window.location.reload();
+  }
+})();
+</script>
+
 <script type="module" src="js/app.js"></script>
 
 <script>

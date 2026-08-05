@@ -547,7 +547,79 @@ export class AnatomyViewer {
 
   prefetch(url) { this.assets.prefetch(url); }
 
-  async setOrgan(modelUrl, hotspots, accent) {
+  // async setOrgan(modelUrl, hotspots, accent) {
+  //   const request = ++this.loadRequest;
+
+  //   // Cancel any running fade animation from a previous organ
+  //   if (this.fadeRaf) {
+  //     cancelAnimationFrame(this.fadeRaf);
+  //     this.fadeRaf = null;
+  //   }
+
+  //   this.select(null);
+  //   this.callbacks.onLoading(true, 0);
+
+  //   const outgoing = this.organ;
+  //   if (outgoing) {
+  //     this.setDepthPrepass(outgoing, false);
+  //     this.hotspots.clear();
+  //     this.busy(0.8);
+  //     await this.tween(outgoing.pivot.scale, { x: 0.72, y: 0.72, z: 0.72, duration: 0.34, ease: 'power2.in' });
+  //     if (request !== this.loadRequest) return false;
+  //     this.assets.release(outgoing);
+  //     this.organ = null; this.dirty = true;
+  //   }
+
+  //   if (request !== this.loadRequest) return false;
+  //   this.tween(this.camera.position, { z: 9.2, duration: 0.42, ease: 'power2.inOut' });
+
+  //   let organ = null;
+  //   let attempts = 0;
+  //   const maxAttempts = 3;
+
+  //   while (attempts < maxAttempts) {
+  //     attempts++;
+  //     try {
+  //       organ = await this.assets.load(modelUrl, (p) => {
+  //         if (request === this.loadRequest) this.callbacks.onLoading(true, p);
+  //       });
+  //       break; // success
+  //     } catch (e) {
+  //       console.warn(`Load attempt ${attempts} failed for ${modelUrl}`, e);
+  //       if (attempts >= maxAttempts) {
+  //         // All retries exhausted — clean up and return gracefully
+  //         if (request === this.loadRequest) {
+  //           this.callbacks.onLoading(false, 0);
+  //           this.organ = null;
+  //         }
+  //         return false;
+  //       }
+  //       await wait(400);
+  //       if (request !== this.loadRequest) return false;
+  //     }
+  //   }
+
+  //   if (request !== this.loadRequest || this.disposed || !organ) return false;
+
+  //   this.organ = organ;
+  //   organ.pivot.scale.setScalar(1); organ.pivot.position.set(0,0,0);
+  //   this.scene.add(organ.pivot); organ.pivot.updateWorldMatrix(true, true);
+  //   this.hotspots.attach(organ.pivot, hotspots, organ.meshes);
+  //   this.hotspots.setPixelSize(DOT_PIXELS, this.height, CAMERA_FOV);
+  //   if (this.crossSection) this.applyClipping(true);
+  //   const glow = this.scene.getObjectByName('organ-glow');
+  //   if (glow) glow.color.set(accent);
+  //   organ.pivot.scale.setScalar(0.58); organ.pivot.position.z = -1.3;
+  //   this.busy(1.4);
+  //   this.fade(organ, 1, 0.72);
+  //   this.callbacks.onLoading(false, 1);
+  //   this.tween(organ.pivot.scale, { x: 1, y: 1, z: 1, duration: 0.9, ease: 'back.out(1.25)' });
+  //   this.tween(organ.pivot.position, { z: 0, duration: 0.85, ease: 'power3.out' });
+  //   this.tween(this.camera.position, { z: 8.2, duration: 0.9, ease: 'power2.out', delay: 0.08 });
+  //   return true;
+  // }
+
+    async setOrgan(modelUrl, hotspots, accent) {
     const request = ++this.loadRequest;
 
     // Cancel any running fade animation from a previous organ
@@ -567,11 +639,14 @@ export class AnatomyViewer {
       await this.tween(outgoing.pivot.scale, { x: 0.72, y: 0.72, z: 0.72, duration: 0.34, ease: 'power2.in' });
       if (request !== this.loadRequest) return false;
       this.assets.release(outgoing);
-      this.organ = null; this.dirty = true;
+      this.organ = null;
+      this.dirty = true;
     }
 
     if (request !== this.loadRequest) return false;
     this.tween(this.camera.position, { z: 9.2, duration: 0.42, ease: 'power2.inOut' });
+
+    console.log('[AnatomyViewer] Loading model:', modelUrl);
 
     let organ = null;
     let attempts = 0;
@@ -583,42 +658,81 @@ export class AnatomyViewer {
         organ = await this.assets.load(modelUrl, (p) => {
           if (request === this.loadRequest) this.callbacks.onLoading(true, p);
         });
-        break; // success
+        console.log('[AnatomyViewer] Model loaded successfully:', modelUrl);
+        break;
       } catch (e) {
-        console.warn(`Load attempt ${attempts} failed for ${modelUrl}`, e);
+        console.warn(`[AnatomyViewer] Load attempt ${attempts} failed for ${modelUrl}`, e);
         if (attempts >= maxAttempts) {
-          // All retries exhausted — clean up and return gracefully
+          console.error('[AnatomyViewer] All retries exhausted for', modelUrl);
           if (request === this.loadRequest) {
             this.callbacks.onLoading(false, 0);
             this.organ = null;
           }
           return false;
         }
-        await wait(400);
+        await new Promise(r => setTimeout(r, 400));
         if (request !== this.loadRequest) return false;
       }
     }
 
-    if (request !== this.loadRequest || this.disposed || !organ) return false;
+    if (request !== this.loadRequest || this.disposed || !organ) {
+      return false;
+    }
 
     this.organ = organ;
-    organ.pivot.scale.setScalar(1); organ.pivot.position.set(0,0,0);
-    this.scene.add(organ.pivot); organ.pivot.updateWorldMatrix(true, true);
+    organ.pivot.scale.setScalar(1);
+    organ.pivot.position.set(0, 0, 0);
+    this.scene.add(organ.pivot);
+    organ.pivot.updateWorldMatrix(true, true);
+
     this.hotspots.attach(organ.pivot, hotspots, organ.meshes);
     this.hotspots.setPixelSize(DOT_PIXELS, this.height, CAMERA_FOV);
+
     if (this.crossSection) this.applyClipping(true);
+
     const glow = this.scene.getObjectByName('organ-glow');
     if (glow) glow.color.set(accent);
-    organ.pivot.scale.setScalar(0.58); organ.pivot.position.z = -1.3;
+
+    organ.pivot.scale.setScalar(0.58);
+    organ.pivot.position.z = -1.3;
+
     this.busy(1.4);
     this.fade(organ, 1, 0.72);
     this.callbacks.onLoading(false, 1);
+
     this.tween(organ.pivot.scale, { x: 1, y: 1, z: 1, duration: 0.9, ease: 'back.out(1.25)' });
     this.tween(organ.pivot.position, { z: 0, duration: 0.85, ease: 'power3.out' });
     this.tween(this.camera.position, { z: 8.2, duration: 0.9, ease: 'power2.out', delay: 0.08 });
+
     return true;
   }
 
+  fade(organ, to, duration) {
+    const materials = this.materials(organ);
+    const state = { value: to >= 1 ? 0 : 1 };
+    materials.forEach((m) => { m.transparent = true; m.opacity = state.value; m.depthWrite = true; });
+    this.setDepthPrepass(organ, true);
+    this.busy(duration + 0.1);
+    const start = performance.now();
+    const tick = () => {
+      if (this.disposed) return;
+      const t = Math.min((performance.now() - start) / (duration * 1000), 1);
+      const eased = 1 - (1 - t) * (1 - t);
+      const val = to >= 1 ? eased : 1 - eased;
+      materials.forEach((m) => (m.opacity = val));
+      this.dirty = true;
+      if (t < 1) {
+        this.fadeRaf = requestAnimationFrame(tick);
+      } else {
+        if (to >= 1) materials.forEach((m) => { m.transparent = false; m.opacity = 1; m.depthWrite = true; });
+        this.setDepthPrepass(organ, false);
+        this.fadeRaf = null;
+        this.dirty = true;
+      }
+    };
+    this.fadeRaf = requestAnimationFrame(tick);
+  }
+  
   materials(organ) {
     const list = [];
     organ.meshes.forEach((mesh) => {
