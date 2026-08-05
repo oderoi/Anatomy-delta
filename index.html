@@ -415,25 +415,6 @@ body {
 }
 @keyframes orbit { to { transform: rotate(360deg); } }
 
-.error-overlay {
-  position: absolute;
-  inset: 0;
-  z-index: 10;
-  display: none;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-  background: rgba(251,246,238,.92);
-  backdrop-filter: blur(8px);
-  padding: 40px;
-  text-align: center;
-}
-.error-overlay.visible { display: flex; }
-.error-overlay h3 { font: 500 22px var(--font-serif), serif; color: #b85a4a; }
-.error-overlay p { color: var(--muted); font-size: 13px; max-width: 400px; line-height: 1.5; }
-.error-overlay code { background: rgba(0,0,0,.05); padding: 2px 6px; border-radius: 4px; font-size: 12px; }
-
 .info-panel {
   padding: 21px 20px 17px;
   overflow: auto;
@@ -781,7 +762,6 @@ body {
     <button class="profile" aria-label="Profile" style="width:40px;height:40px;border-radius:50%;border:1px solid var(--line);background:rgba(255,255,255,.3);display:grid;place-items:center;font-weight:600;cursor:pointer;">
       <span>AA</span>
     </button>
-    <!-- FIX: removed conflicting inline display:none so CSS media query controls visibility -->
     <button class="mobile-library-trigger" id="mobileLibraryTrigger" aria-label="Open organ library" style="width:40px;height:40px;border-radius:50%;border:1px solid var(--line);background:rgba(255,255,255,.3);display:grid;place-items:center;cursor:pointer;">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h18M3 6h18M3 18h18"/></svg>
     </button>
@@ -860,14 +840,7 @@ body {
         <strong id="loaderText">Preparing specimen</strong>
         <span id="loaderPercent">0%</span>
       </div>
-
-      <div class="error-overlay" id="errorOverlay">
-        <h3>⚠️ Something went wrong</h3>
-        <p id="errorMessage">Could not load the 3D viewer. Make sure you are running this from a web server, not by opening the file directly.</p>
-        <p style="font-size:11px;margin-top:4px;">Try: <code>python3 -m http.server 8000</code></p>
-        <!-- FIX: added close button so users can dismiss the error and try another organ -->
-        <button id="errorClose" style="margin-top:8px;padding:8px 16px;border:1px solid var(--line);border-radius:8px;background:rgba(255,255,255,.4);cursor:pointer;font:inherit;color:var(--ink);">Dismiss</button>
-      </div>
+      <!-- error overlay removed — failures are retried silently -->
     </div>
 
     <aside class="info-panel" id="infoPanel">

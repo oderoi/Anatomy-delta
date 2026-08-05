@@ -26,6 +26,10 @@ function disposeObject(obj) {
   });
 }
 
+function wait(ms) {
+  return new Promise((res) => setTimeout(res, ms));
+}
+
 class AnatomyAssetManager {
   constructor(renderer) {
     this.maxAnisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
@@ -42,7 +46,7 @@ class AnatomyAssetManager {
     fetch(url, { priority: 'low' }).catch(() => {});
   }
 
-  async load(url, onProgress) {
+  async load(url, onProgress, retries = 2) {
     const cached = this.cache.get(url);
     if (cached) {
       this.cache.delete(url); this.cache.set(url, cached);
@@ -51,7 +55,7 @@ class AnatomyAssetManager {
       this.current = cached;
       return cached;
     }
-    const pending = this.inflight.get(url) ?? this.parse(url, onProgress);
+    const pending = this.inflight.get(url) ?? this.parse(url, onProgress, retries);
     this.inflight.set(url, pending);
     try {
       const organ = await pending;
@@ -64,10 +68,22 @@ class AnatomyAssetManager {
     }
   }
 
-  async parse(url, onProgress) {
-    const gltf = await this.loader.loadAsync(url, (e) => {
-      if (e.total > 0) onProgress?.(e.loaded / e.total);
-    });
+  async parse(url, onProgress, retries) {
+    try {
+      const gltf = await this.loader.loadAsync(url, (e) => {
+        if (e.total > 0) onProgress?.(e.loaded / e.total);
+      });
+      return this.buildOrgan(gltf);
+    } catch (err) {
+      if (retries > 0) {
+        await wait(350);
+        return this.parse(url, onProgress, retries - 1);
+      }
+      throw err;
+    }
+  }
+
+  buildOrgan(gltf) {
     const model = gltf.scene;
     const box = new THREE.Box3().setFromObject(model);
     const size = box.getSize(new THREE.Vector3());
@@ -120,7 +136,7 @@ class AnatomyAssetManager {
       mixer = new THREE.AnimationMixer(model);
       gltf.animations.forEach((clip) => mixer.clipAction(clip).play());
     }
-    return { url, pivot, meshes, mixer };
+    return { pivot, meshes, mixer };
   }
 
   resetMaterials(organ) {
@@ -334,7 +350,7 @@ class HotspotLayer {
       const ease = 1 - Math.exp(-delta * 12);
       if (Math.abs(target - marker.opacity) > 0.002) settled = false;
       if (Math.abs(emphasisTarget - marker.emphasis) > 0.002) settled = false;
-      marker.opacity += (target - marker.opacity) * ease;
+      marker.opacity +=       (target - marker.opacity) * ease;
       marker.emphasis += (emphasisTarget - marker.emphasis) * ease;
       marker.dot.material.opacity = marker.opacity;
       marker.dot.visible = marker.opacity > 0.01;
@@ -435,7 +451,8 @@ export class AnatomyViewer {
     this.selectedId = null; this.hoveredId = null;
     this.hoverProbe = null; this.pointerId = null;
     this.pointerStart = { x: 0, y: 0 }; this.dragged = false;
-    this.calloutEl = null; this.fadeTween = null;
+    this.calloutEl = null;
+    this.fadeRaf = null;          // ← cancellable fade handle
     this.disposed = false; this.organ = null;
     this.crossSection = false; this.isolated = false;
     this.clipPlane = new THREE.Plane(new THREE.Vector3(-1, 0, 0), 0);
@@ -532,32 +549,58 @@ export class AnatomyViewer {
 
   async setOrgan(modelUrl, hotspots, accent) {
     const request = ++this.loadRequest;
+
+    // Cancel any running fade animation from a previous organ
+    if (this.fadeRaf) {
+      cancelAnimationFrame(this.fadeRaf);
+      this.fadeRaf = null;
+    }
+
     this.select(null);
     this.callbacks.onLoading(true, 0);
+
     const outgoing = this.organ;
     if (outgoing) {
-      if (this.fadeTween) { this.fadeTween = null; }
       this.setDepthPrepass(outgoing, false);
       this.hotspots.clear();
       this.busy(0.8);
       await this.tween(outgoing.pivot.scale, { x: 0.72, y: 0.72, z: 0.72, duration: 0.34, ease: 'power2.in' });
-      if (request !== this.loadRequest) return;
+      if (request !== this.loadRequest) return false;
       this.assets.release(outgoing);
       this.organ = null; this.dirty = true;
     }
-    if (request !== this.loadRequest) return;
+
+    if (request !== this.loadRequest) return false;
     this.tween(this.camera.position, { z: 9.2, duration: 0.42, ease: 'power2.inOut' });
-    let organ;
-    try {
-      organ = await this.assets.load(modelUrl, (p) => { if (request === this.loadRequest) this.callbacks.onLoading(true, p); });
-    } catch (e) { 
-      if (request === this.loadRequest) {
-        this.callbacks.onLoading(false, 0);
-        this.organ = null; 
+
+    let organ = null;
+    let attempts = 0;
+    const maxAttempts = 3;
+
+    while (attempts < maxAttempts) {
+      attempts++;
+      try {
+        organ = await this.assets.load(modelUrl, (p) => {
+          if (request === this.loadRequest) this.callbacks.onLoading(true, p);
+        });
+        break; // success
+      } catch (e) {
+        console.warn(`Load attempt ${attempts} failed for ${modelUrl}`, e);
+        if (attempts >= maxAttempts) {
+          // All retries exhausted — clean up and return gracefully
+          if (request === this.loadRequest) {
+            this.callbacks.onLoading(false, 0);
+            this.organ = null;
+          }
+          return false;
+        }
+        await wait(400);
+        if (request !== this.loadRequest) return false;
       }
-      throw e; 
     }
-    if (request !== this.loadRequest || this.disposed) return;
+
+    if (request !== this.loadRequest || this.disposed || !organ) return false;
+
     this.organ = organ;
     organ.pivot.scale.setScalar(1); organ.pivot.position.set(0,0,0);
     this.scene.add(organ.pivot); organ.pivot.updateWorldMatrix(true, true);
@@ -567,11 +610,13 @@ export class AnatomyViewer {
     const glow = this.scene.getObjectByName('organ-glow');
     if (glow) glow.color.set(accent);
     organ.pivot.scale.setScalar(0.58); organ.pivot.position.z = -1.3;
-    this.busy(1.4); this.fade(organ, 1, 0.72);
+    this.busy(1.4);
+    this.fade(organ, 1, 0.72);
     this.callbacks.onLoading(false, 1);
     this.tween(organ.pivot.scale, { x: 1, y: 1, z: 1, duration: 0.9, ease: 'back.out(1.25)' });
     this.tween(organ.pivot.position, { z: 0, duration: 0.85, ease: 'power3.out' });
     this.tween(this.camera.position, { z: 8.2, duration: 0.9, ease: 'power2.out', delay: 0.08 });
+    return true;
   }
 
   materials(organ) {
@@ -591,19 +636,21 @@ export class AnatomyViewer {
     this.busy(duration + 0.1);
     const start = performance.now();
     const tick = () => {
+      if (this.disposed) return;
       const t = Math.min((performance.now() - start) / (duration * 1000), 1);
       const eased = 1 - (1 - t) * (1 - t);
       const val = to >= 1 ? eased : 1 - eased;
       materials.forEach((m) => (m.opacity = val));
       this.dirty = true;
-      if (t < 1) requestAnimationFrame(tick);
-      else {
+      if (t < 1) {
+        this.fadeRaf = requestAnimationFrame(tick);
+      } else {
         if (to >= 1) materials.forEach((m) => { m.transparent = false; m.opacity = 1; m.depthWrite = true; });
         this.setDepthPrepass(organ, false);
-        this.fadeTween = null; this.dirty = true;
+        this.fadeRaf = null; this.dirty = true;
       }
     };
-    tick();
+    this.fadeRaf = requestAnimationFrame(tick);
   }
 
   setDepthPrepass(organ, enabled) {
@@ -795,6 +842,7 @@ export class AnatomyViewer {
   dispose() {
     this.disposed = true; this.loadRequest++;
     cancelAnimationFrame(this.frame);
+    if (this.fadeRaf) { cancelAnimationFrame(this.fadeRaf); this.fadeRaf = null; }
     this.controls.removeEventListener('start', this.onControlStart);
     this.controls.dispose();
     this.resizeObserver.disconnect();

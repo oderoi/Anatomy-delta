@@ -4,19 +4,9 @@ import { AnatomyViewer } from './viewer.js';
 const $ = (sel) => document.querySelector(sel);
 const $$ = (sel) => Array.from(document.querySelectorAll(sel));
 
-function showError(msg) {
-  const overlay = $('#errorOverlay');
-  const message = $('#errorMessage');
-  if (overlay && message) {
-    message.textContent = msg;
-    overlay.classList.add('visible');
-  }
-  console.error(msg);
-}
-
 class AnatomyApp {
   constructor() {
-    this.currentOrganId = null; // nothing selected on startup
+    this.currentOrganId = null;
     this.viewer = null;
     this.compareMode = false;
     this.systems = [...new Set(organs.map((o) => o.system))];
@@ -29,11 +19,9 @@ class AnatomyApp {
       this.renderLearningCards();
       this.initViewer();
       this.bindEvents();
-      // do NOT auto-load any organ
       console.log('Anatomy Atelier initialized successfully');
     } catch (err) {
-      showError('Failed to initialize: ' + err.message);
-      throw err;
+      console.error('Failed to initialize:', err);
     }
   }
 
@@ -136,7 +124,6 @@ class AnatomyApp {
   }
 
   async selectOrgan(id) {
-    // allow re-click if the model never actually loaded
     if (this.currentOrganId === id && this.viewer?.organ) return;
     const organ = organById[id];
     if (!organ) {
@@ -145,13 +132,11 @@ class AnatomyApp {
     }
     this.currentOrganId = id;
 
-    // Update UI
     $$('.organ-item').forEach((btn) => btn.classList.toggle('active', btn.dataset.id === id));
     $$('.main-nav button').forEach((btn, i) => {
       btn.classList.toggle('active', this.systems[i] === organ.system);
     });
 
-    // Update info panel
     $('#infoSystem').textContent = organ.system;
     $('#infoName').textContent = organ.name;
     $('#infoScientific').textContent = organ.scientificName;
@@ -164,7 +149,6 @@ class AnatomyApp {
     $('#viewerGlow').style.background = organ.accent + '0F';
     $('#tipText').textContent = organ.funFact;
 
-    // Key facts
     const facts = [
       { label: 'Size', value: organ.size, icon: '◎' },
       { label: 'Weight', value: organ.weight, icon: '⚖' },
@@ -180,21 +164,20 @@ class AnatomyApp {
       </div>
     `).join('');
 
-    // Update hotspot index for screen readers
     $('#hotspotIndex').innerHTML = organ.hotspots.map((h) => `
       <li><button onclick="app.selectHotspot('${h.id}')">${h.label}: ${h.detail}</button></li>
     `).join('');
 
-    // Load 3D model
-    try {
-      await this.viewer.setOrgan(organ.model, organ.hotspots, organ.accent);
-    } catch (err) {
-      console.error('Failed to load organ model:', err);
-      showError('Failed to load 3D model. Make sure model files are in the models/ folder and you are using a web server (not file://).');
+    // Load 3D model — viewer handles retries internally, never throws to us
+    const ok = await this.viewer.setOrgan(organ.model, organ.hotspots, organ.accent);
+    if (!ok) {
+      console.warn('Model load failed for', organ.name, '- user can click again to retry');
+      // Reset currentOrganId so the user can click the same organ again
+      this.currentOrganId = null;
+      $$('.organ-item').forEach((btn) => btn.classList.remove('active'));
       return;
     }
 
-    // Prefetch next likely organs
     const idx = organs.findIndex((o) => o.id === id);
     [1, 2].forEach((offset) => {
       const next = organs[(idx + offset) % organs.length];
@@ -235,13 +218,11 @@ class AnatomyApp {
   }
 
   bindEvents() {
-    // Search
     const searchInput = $('#searchInput');
     if (searchInput) {
       searchInput.addEventListener('input', (e) => this.renderOrganList(e.target.value));
     }
 
-    // Mobile library
     const trigger = $('#mobileLibraryTrigger');
     const closeBtn = $('#mobileLibraryClose');
     const backdrop = $('#drawerBackdrop');
@@ -258,7 +239,6 @@ class AnatomyApp {
     if (closeBtn) closeBtn.onclick = closeDrawer;
     if (backdrop) backdrop.onclick = closeDrawer;
 
-    // Tools
     const tools = $('#viewerTools');
     if (tools) tools.addEventListener('click', (e) => {
       const btn = e.target.closest('[data-tool]');
@@ -272,7 +252,6 @@ class AnatomyApp {
       if (tool === 'compare') this.toggleCompare();
     });
 
-    // Auto-rotate
     const autoRotateBtn = $('#autoRotateBtn');
     if (autoRotateBtn) autoRotateBtn.onclick = () => {
       const sw = $('#autoRotateSwitch');
@@ -281,18 +260,12 @@ class AnatomyApp {
       autoRotateBtn.setAttribute('aria-pressed', String(!!isOn));
     };
 
-    // Callout close
     const calloutClose = $('#calloutClose');
     if (calloutClose) calloutClose.onclick = () => {
       this.viewer.clearSelection();
       $('#hotspotCallout').style.display = 'none';
     };
 
-    // Error overlay close
-    const errorClose = $('#errorClose');
-    if (errorClose) errorClose.onclick = () => $('#errorOverlay').classList.remove('visible');
-
-    // Keyboard
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') {
         this.viewer.clearSelection();
@@ -312,7 +285,6 @@ class AnatomyApp {
   }
 }
 
-// Initialize when DOM is ready
 const app = new AnatomyApp();
 window.app = app;
 
